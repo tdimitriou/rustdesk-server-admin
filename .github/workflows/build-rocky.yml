@@ -33,9 +33,10 @@ jobs:
       image: rockylinux/rockylinux:9
     steps:
       # git required for actions/checkout inside a container image
+      # Do not install package "curl": base image has curl-minimal; adding curl conflicts.
       - name: Install OS packages (GCC, SQLite)
         run: |
-          dnf install -y gcc gcc-c++ git sqlite-devel curl ca-certificates findutils tar gzip
+          dnf install -y gcc gcc-c++ git sqlite-devel ca-certificates findutils tar gzip
 
       - name: Checkout
         uses: actions/checkout@v6
