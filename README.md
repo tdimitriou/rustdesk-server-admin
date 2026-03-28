@@ -3,11 +3,17 @@
 Web admin dashboard for a **self-hosted** RustDesk signal/relay stack (`hbbs` / `hbbr`).  
 This repo is separate from [rustdesk](https://github.com/rustdesk/rustdesk) and [rustdesk-server](https://github.com/rustdesk/rustdesk-server).
 
-## Features (v1)
+## Features
 
 - Password login (`ADMIN_PASSWORD`), session cookie signed with `ADMIN_SESSION_SECRET` (or a derived key if unset — see below).
-- Read-only access to the hbbs SQLite database: peer count from the `peer` table.
+- **Dashboard** with total peer count.
+- **Peer list** (`/peers`): all columns from the hbbs `peer` table, **search** (ID, note, info JSON), **`rustdesk://` connect links** (Windows / Android when the app registered the URL scheme).
+- **Delete peer** and **rename registration ID** (SQL `UPDATE` on `id`; client identifies by `uuid` blob — same idea as changing ID on the device).
 - Plain HTML UI (no SPA). Intended to sit **behind** Apache or nginx (TLS, access control, rate limits) in production.
+
+### Online / last seen
+
+Stock **hbbs does not store “who is online” or “last seen offline” in SQLite**. Online checks use **in-memory** registration (~30s window). The UI shows **`status`**, **`created_at`**, **`info`** (JSON, often last IP from hbbs), and **`note`** — treat them as hints, not authoritative presence.
 
 ## Configuration
 
@@ -16,14 +22,16 @@ This repo is separate from [rustdesk](https://github.com/rustdesk/rustdesk) and 
 | `ADMIN_PASSWORD` | **Yes** | — | Password for the admin UI. |
 | `ADMIN_HOST` | No | `127.0.0.1` | Address to bind (use `0.0.0.0` only if you know what you are doing). |
 | `ADMIN_PORT` | No | `3030` | TCP port (change if `3030` is already in use). |
-| `HBBS_DB_PATH` | No | — | Absolute path to hbbs `db_v2.sqlite3` (or your configured DB file). If unset, the dashboard still loads but peer statistics are omitted. |
+| `HBBS_DB_PATH` | No | — | Absolute path to hbbs `db_v2.sqlite3` (or your configured DB file). Required for peer list and DB writes. |
 | `ADMIN_SESSION_SECRET` | No | — | Secret key for signing session cookies (any long random string). **Set this in production.** If omitted, a weak key is derived from `ADMIN_PASSWORD` and a warning is logged. |
+| `RUSTDESK_CONNECT_RENDEZVOUS` | No | — | Public **hbbs / rendezvous host** for client links, e.g. `rustdesk.example.com` or `rustdesk.example.com:21116`. If set, connect URLs use `rustdesk://<id>/r@<host>` so clients use your server. If unset, links are `rustdesk://<id>` (default public relay behaviour in the client). |
 
 ## Run (development)
 
 ```bash
 set ADMIN_PASSWORD=your-secret
 set HBBS_DB_PATH=C:\path\to\db_v2.sqlite3
+set RUSTDESK_CONNECT_RENDEZVOUS=your.hbbs.host
 cargo run
 ```
 
@@ -32,6 +40,7 @@ On Unix:
 ```bash
 export ADMIN_PASSWORD=your-secret
 export HBBS_DB_PATH=/var/lib/rustdesk-server/db_v2.sqlite3
+export RUSTDESK_CONNECT_RENDEZVOUS=your.hbbs.host
 cargo run
 ```
 
@@ -47,6 +56,7 @@ export ADMIN_PORT=3031
 export ADMIN_PASSWORD=...
 export ADMIN_SESSION_SECRET=...   # long random value
 export HBBS_DB_PATH=/path/to/db_v2.sqlite3
+export RUSTDESK_CONNECT_RENDEZVOUS=your.hbbs.host
 ./rustdesk-server-admin
 ```
 
@@ -54,9 +64,9 @@ Terminate TLS and route a vhost path or subdomain to `http://127.0.0.1:3031` wit
 
 ## Security notes
 
-- **SQLite locking:** hbbs keeps the database open. Opening the same file read-only from this process is usually fine on SQLite, but avoid heavy concurrent access; if you see intermittent errors, retry or point a replica/snapshot at the admin tool instead.
+- **SQLite locking:** hbbs keeps the database open. Reads usually work; **writes** (delete / rename) can return `SQLITE_BUSY`. Use **WAL** mode on the DB if needed, retry, or briefly stop hbbs for maintenance operations.
 - **Password:** Use a strong `ADMIN_PASSWORD` and rely on the reverse proxy for TLS and optional IP allowlists.
-- **Scope:** v1 is read-only; it does not modify peers or server configuration.
+- **Destructive actions:** Anyone who can log in can **delete peers** or **change IDs** — protect the admin URL accordingly.
 
 ## Build
 

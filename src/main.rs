@@ -1,6 +1,7 @@
 mod auth;
 mod config;
 mod db;
+mod peers;
 
 use std::sync::Arc;
 
@@ -13,12 +14,14 @@ use axum::{
 };
 use axum::http::{header, StatusCode};
 use config::Config;
+use sqlx::SqlitePool;
 use subtle::ConstantTimeEq;
 use tokio::net::TcpListener;
 
 #[derive(Clone)]
-struct AppState {
-    config: Arc<Config>,
+pub struct AppState {
+    pub config: Arc<Config>,
+    pub db: Option<SqlitePool>,
 }
 
 #[tokio::main]
@@ -35,15 +38,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         e
     })?);
 
+    let db = if let Some(ref p) = config.hbbs_db_path {
+        Some(
+            db::open_pool(p)
+                .await
+                .map_err(|e| format!("HBBS_DB_PATH ({p}): {e}"))?,
+        )
+    } else {
+        None
+    };
+
     tracing::info!("listening on http://{}", config.listen_addr);
 
     let state = AppState {
         config: config.clone(),
+        db,
     };
 
     let cfg_for_guard = state.config.clone();
     let protected = Router::new()
         .route("/dashboard", get(dashboard))
+        .route("/peers", get(peers::page))
+        .route("/peers/delete", post(peers::post_delete))
+        .route("/peers/rename", post(peers::post_rename))
         .route_layer(from_fn(move |req: Request, next: Next| {
             let cfg = cfg_for_guard.clone();
             async move {
@@ -73,7 +90,7 @@ async fn root() -> impl IntoResponse {
     Redirect::temporary("/dashboard")
 }
 
-fn html_page(title: &str, body: &str) -> String {
+pub fn html_page(title: &str, body: &str) -> String {
     format!(
         r#"<!DOCTYPE html>
 <html lang="en">
@@ -82,12 +99,25 @@ fn html_page(title: &str, body: &str) -> String {
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>{title}</title>
   <style>
-    body {{ font-family: system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; }}
+    body {{ font-family: system-ui, sans-serif; max-width: 96rem; margin: 1.5rem auto; padding: 0 1rem; }}
     code {{ background: #f4f4f4; padding: 0.1em 0.35em; border-radius: 4px; }}
     .err {{ color: #b00020; }}
+    .notice {{ color: #0a6629; }}
     .muted {{ color: #555; font-size: 0.9rem; }}
-    input[type=password] {{ width: 100%; max-width: 20rem; padding: 0.5rem; }}
-    button {{ padding: 0.45rem 1rem; margin-top: 0.5rem; }}
+    .small {{ display: block; font-size: 0.75rem; margin-top: 0.25rem; }}
+    input[type=password], input[type=text], input[type=search] {{ padding: 0.35rem 0.5rem; }}
+    button {{ padding: 0.35rem 0.75rem; margin-top: 0.25rem; cursor: pointer; }}
+    button.danger {{ background: #c62828; color: #fff; border: none; border-radius: 4px; }}
+    .callout {{ background: #f8f4e8; border: 1px solid #e6dcc4; padding: 0.75rem 1rem; border-radius: 6px; margin: 1rem 0; }}
+    .search {{ margin: 1rem 0; }}
+    .table-wrap {{ overflow-x: auto; margin-top: 1rem; }}
+    table {{ border-collapse: collapse; width: 100%; font-size: 0.85rem; }}
+    th, td {{ border: 1px solid #ddd; padding: 0.35rem 0.5rem; vertical-align: top; }}
+    th {{ background: #f0f0f0; text-align: left; }}
+    code.blob {{ font-size: 0.72rem; word-break: break-all; }}
+    code.info {{ font-size: 0.72rem; white-space: pre-wrap; word-break: break-word; }}
+    form.inline {{ display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0; }}
+    a.connect {{ font-weight: 600; }}
   </style>
 </head>
 <body>
@@ -159,22 +189,25 @@ async fn logout_post() -> impl IntoResponse {
 }
 
 async fn dashboard(State(st): State<AppState>) -> impl IntoResponse {
-    let (peer_line, db_note) = match &st.config.hbbs_db_path {
+    let (peer_line, db_note) = match &st.db {
         None => (
             "<p><em>HBBS_DB_PATH is not set.</em> Peer count is unavailable.</p>".to_string(),
             String::new(),
         ),
-        Some(path) => match db::peer_count(path).await {
+        Some(pool) => match db::peer_count(pool).await {
             Ok(n) => (
                 format!("<p>Registered peers (hbbs DB): <strong>{n}</strong></p>"),
-                format!("<p class=\"muted\">Reading <code>{}</code> read-only.</p>", esc(path)),
+                format!(
+                    "<p class=\"muted\">SQLite <code>{}</code> (read/write for peer management).</p>",
+                    esc(st.config.hbbs_db_path.as_deref().unwrap_or(""))
+                ),
             ),
             Err(e) => (
                 format!(
                     "<p class=\"err\">Could not read hbbs database: {}</p>",
                     esc(&e.to_string())
                 ),
-                format!("<p class=\"muted\">Path: <code>{}</code></p>", esc(path)),
+                String::new(),
             ),
         },
     };
@@ -183,6 +216,7 @@ async fn dashboard(State(st): State<AppState>) -> impl IntoResponse {
         r#"<h1>Dashboard</h1>
 {peer_line}
 {db_note}
+<p><a href="/peers">Peer list</a> — search, connect via <code>rustdesk://</code>, rename ID, delete</p>
 <p><a href="/logout">Log out</a> (POST form below for browsers without JS)</p>
 <form method="post" action="/logout"><button type="submit">Log out</button></form>"#
     );

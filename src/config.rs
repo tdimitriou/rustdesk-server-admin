@@ -6,6 +6,8 @@ pub struct Config {
     pub hbbs_db_path: Option<String>,
     pub admin_password: String,
     pub session_secret: Vec<u8>,
+    /// If set, connect links use `rustdesk://ID/r@HOST` (public hbbs / rendezvous hostname).
+    pub rustdesk_connect_rendezvous: Option<String>,
 }
 
 impl Config {
@@ -51,6 +53,7 @@ impl Config {
             hbbs_db_path,
             admin_password,
             session_secret,
+            rustdesk_connect_rendezvous,
         })
     }
 }
