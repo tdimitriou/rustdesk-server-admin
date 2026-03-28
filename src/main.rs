@@ -204,5 +204,5 @@ fn ct_eq_password(got: &str, expected: &str) -> bool {
     if got.len() != expected.len() {
         return false;
     }
-    got.as_bytes().ct_eq(expected.as_bytes()).into()
+    bool::from(got.as_bytes().ct_eq(expected.as_bytes()))
 }

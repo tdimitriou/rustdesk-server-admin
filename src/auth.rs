@@ -53,7 +53,7 @@ pub fn verify_session_token(config: &Config, token: &str) -> bool {
     if sig_expected.len() != computed.len() {
         return false;
     }
-    if !sig_expected.as_slice().ct_eq(computed.as_slice()).into() {
+    if !bool::from(sig_expected.as_slice().ct_eq(computed.as_slice())) {
         return false;
     }
     let Ok(payload): Result<SessionPayload, _> = serde_json::from_slice(&json) else {
