@@ -65,3 +65,12 @@ cargo build --release
 ```
 
 Binary: `target/release/rustdesk-server-admin` (or `.exe` on Windows).
+
+## GitHub Actions (Rocky Linux binary)
+
+Workflow [`.github/workflows/build-rocky.yml`](.github/workflows/build-rocky.yml) builds a **glibc** release binary inside a **Rocky Linux 9** container (x86_64). That uses the distro’s own GCC and `sqlite-devel`, instead of a cross/musl toolchain (which is where many gcc/linker headaches show up).
+
+- **Manual run:** Actions → *Build Rocky Linux x86_64* → *Run workflow*. Download the artifact `rustdesk-server-admin-rocky9-x86_64-gnu.tar.gz`.
+- **Optional:** enable *Also publish the tarball on a GitHub release* and set the tag name.
+
+The resulting binary targets RHEL-family 9.x (Rocky, Alma, RHEL). For EL8, change the workflow image to `rockylinux/rockylinux:8` and adjust the tarball name if you fork the job.
