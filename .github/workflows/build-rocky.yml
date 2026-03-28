@@ -31,24 +31,37 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: rockylinux/rockylinux:9
-    # GHA sets HOME=/github/home but the container user is root (home /root); rustup errors on mismatch.
+    defaults:
+      run:
+        shell: sh
     env:
+      # Match root’s home; GHA’s default HOME in containers confuses rustup.
       HOME: /root
+      RUSTUP_HOME: /root/.rustup
+      CARGO_HOME: /root/.cargo
+      # GHA docker exec often gets an empty PATH; without this, `bash` (and even `cargo`) is not found.
+      PATH: /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
       # git required for actions/checkout inside a container image
       # Do not install package "curl": base image has curl-minimal; adding curl conflicts.
-      # bash: dtolnay/rust-toolchain and several composite actions exec bash explicitly.
-      - name: Install OS packages (GCC, SQLite, bash)
+      - name: Install OS packages (GCC, SQLite, file, bash)
         run: |
-          dnf install -y bash gcc gcc-c++ git sqlite-devel ca-certificates findutils tar gzip
+          dnf install -y bash gcc gcc-c++ git sqlite-devel ca-certificates findutils tar gzip file
+          # Some tooling probes ~/.docker/config.json; silence permission noise on fresh /root.
+          mkdir -p /root/.docker
+          printf '%s\n' '{}' > /root/.docker/config.json
 
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Rust stable
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: stable
+      # dtolnay/rust-toolchain runs bash internally; GHA’s container exec often has no bash on PATH.
+      - name: Install Rust stable (rustup via sh)
+        shell: sh
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+            --profile minimal \
+            --default-toolchain stable \
+            --no-modify-path
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -57,7 +70,7 @@ jobs:
         run: cargo build --release
 
       - name: Package tarball
-        shell: bash
+        shell: sh
         run: |
           mkdir -p dist
           cp target/release/rustdesk-server-admin dist/
