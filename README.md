@@ -66,11 +66,11 @@ cargo build --release
 
 Binary: `target/release/rustdesk-server-admin` (or `.exe` on Windows).
 
-## GitHub Actions (Rocky Linux binary)
+## GitHub Actions (Linux amd64 binary)
 
-Workflow [`.github/workflows/build-rocky.yml`](.github/workflows/build-rocky.yml) builds a **glibc** release binary inside a **Rocky Linux 9** container (x86_64). That uses the distro’s own GCC and `sqlite-devel`, instead of a cross/musl toolchain (which is where many gcc/linker headaches show up).
+Workflow [`.github/workflows/manual-binaries.yml`](.github/workflows/manual-binaries.yml) follows the same approach as [rustdesk-server’s manual binaries workflow](https://github.com/rustdesk/rustdesk-server/blob/master/.github/workflows/manual-binaries.yml): **Ubuntu 22.04**, **`cross`**, and target **`x86_64-unknown-linux-musl`**. The artifact is **`rustdesk-server-admin-linux-amd64-musl.tar.gz`** (statically linked musl binary, suitable for Rocky/RHEL and most Linux amd64 hosts).
 
-- **Manual run:** Actions → *Build Rocky Linux x86_64* → *Run workflow*. Download the artifact `rustdesk-server-admin-rocky9-x86_64-gnu.tar.gz`.
-- **Optional:** enable *Also publish the tarball on a GitHub release* and set the tag name.
+- **Manual run:** Actions → *Manual Server Admin Binary Build* → *Run workflow*.
+- **Optional:** enable publishing to a GitHub release and set the tag (default `admin-nightly`).
 
-The resulting binary targets RHEL-family 9.x (Rocky, Alma, RHEL). For EL8, change the workflow image to `rockylinux/rockylinux:8` and adjust the tarball name if you fork the job.
+SQLite is built via **`libsqlite3-sys` / `bundled`** so the musl cross build does not rely on the image’s system SQLite dev packages.

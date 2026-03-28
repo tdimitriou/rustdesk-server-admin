@@ -1,0 +1,71 @@
+# Same pattern as rustdesk-server/.github/workflows/manual-binaries.yml:
+# ubuntu-22.04 + dtolnay/rust-toolchain + cross + x86_64-unknown-linux-musl.
+name: Manual Server Admin Binary Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload_release:
+        description: "Also publish artifacts to a GitHub release tag"
+        required: true
+        default: false
+        type: boolean
+      release_tag:
+        description: "Release tag name when upload_release=true"
+        required: true
+        default: "admin-nightly"
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  TARGET_TRIPLE: x86_64-unknown-linux-musl
+
+jobs:
+  build-linux-amd64:
+    name: Build Linux amd64 binary (musl)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+          targets: ${{ env.TARGET_TRIPLE }}
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cross
+        run: cargo install cross --locked
+
+      - name: Build release binary (musl)
+        run: cross build --release --target=${{ env.TARGET_TRIPLE }}
+
+      - name: Prepare artifact bundle
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp "target/${{ env.TARGET_TRIPLE }}/release/rustdesk-server-admin" dist/
+          chmod +x dist/rustdesk-server-admin
+          file dist/rustdesk-server-admin
+          tar -C dist -czf rustdesk-server-admin-linux-amd64-musl.tar.gz rustdesk-server-admin
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: rustdesk-server-admin-linux-amd64-musl
+          path: rustdesk-server-admin-linux-amd64-musl.tar.gz
+          if-no-files-found: error
+
+      - name: Publish release asset
+        if: ${{ inputs.upload_release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          tag_name: ${{ inputs.release_tag }}
+          overwrite_files: true
+          files: rustdesk-server-admin-linux-amd64-musl.tar.gz

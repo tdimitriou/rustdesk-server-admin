@@ -16,6 +16,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
 sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+# Static SQLite for portable Linux builds (e.g. cross x86_64-unknown-linux-musl in CI).
+libsqlite3-sys = { version = "0.30", features = ["bundled"] }
 subtle = "2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal"] }
 tracing = "0.1"
