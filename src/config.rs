@@ -21,6 +21,11 @@ impl Config {
 
         let hbbs_db_path = env::var("HBBS_DB_PATH").ok().filter(|s| !s.trim().is_empty());
 
+        let rustdesk_connect_rendezvous =
+            env::var("RUSTDESK_CONNECT_RENDEZVOUS")
+                .ok()
+                .filter(|s| !s.trim().is_empty());
+
         let admin_password = env::var("ADMIN_PASSWORD").unwrap_or_default();
         if admin_password.is_empty() {
             return Err(

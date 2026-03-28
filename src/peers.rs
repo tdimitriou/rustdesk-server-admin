@@ -269,8 +269,3 @@ pub async fn post_rename(
         }
     }
 }
-</think>
-Fixing `render_row`: correcting the `info` preview (remove erroneous `PeerRow::chars`).
-
-<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
-StrReplace
