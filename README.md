@@ -7,7 +7,7 @@ This repo is separate from [rustdesk](https://github.com/rustdesk/rustdesk) and 
 
 - Password login (`ADMIN_PASSWORD`), session cookie signed with `ADMIN_SESSION_SECRET` (or a derived key if unset — see below).
 - **Dashboard** with total peer count.
-- **Peer list** (`/peers`): all columns from the hbbs `peer` table, **search** (ID, note, info JSON), **`rustdesk://` connect links** (Windows / Android when the app registered the URL scheme).
+- **Peer list** (`/peers`): all columns from the hbbs `peer` table, **search** (ID, **UUID as hex**, note, info JSON), **`rustdesk://` connect links** (Windows / Android when the app registered the URL scheme).
 - **Delete peer** and **rename registration ID** (SQL `UPDATE` on `id`; client identifies by `uuid` blob — same idea as changing ID on the device).
 - Plain HTML UI (no SPA). Intended to sit **behind** Apache or nginx (TLS, access control, rate limits) in production.
 

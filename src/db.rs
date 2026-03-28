@@ -61,6 +61,7 @@ pub async fn list_peers(pool: &SqlitePool, search: &str) -> Result<Vec<PeerRow>,
         sqlx::query_as::<_, PeerRow>(
             "SELECT guid, id, uuid, pk, user, created_at, status, note, info FROM peer \
              WHERE id LIKE ?1 ESCAPE '\\' \
+                OR lower(hex(uuid)) LIKE lower(?1) ESCAPE '\\' \
                 OR IFNULL(note, '') LIKE ?1 ESCAPE '\\' \
                 OR info LIKE ?1 ESCAPE '\\' \
              ORDER BY id COLLATE NOCASE",

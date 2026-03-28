@@ -68,7 +68,7 @@ pub async fn page(
         }
     }
 
-    body.push_str(r#"<form class="search" method="get" action="/peers"><label>Search <input type="search" name="q" placeholder="id, note, info…" value=""#);
+    body.push_str(r#"<form class="search" method="get" action="/peers"><label>Search <input type="search" name="q" placeholder="id, uuid (hex), note, info…" value=""#);
     body.push_str(&esc_attr(q));
     body.push_str(r#""/></label> <button type="submit">Search</button></form>"#);
     body.push_str(&format!(
