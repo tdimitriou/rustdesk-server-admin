@@ -31,12 +31,16 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: rockylinux/rockylinux:9
+    # GHA sets HOME=/github/home but the container user is root (home /root); rustup errors on mismatch.
+    env:
+      HOME: /root
     steps:
       # git required for actions/checkout inside a container image
       # Do not install package "curl": base image has curl-minimal; adding curl conflicts.
-      - name: Install OS packages (GCC, SQLite)
+      # bash: dtolnay/rust-toolchain and several composite actions exec bash explicitly.
+      - name: Install OS packages (GCC, SQLite, bash)
         run: |
-          dnf install -y gcc gcc-c++ git sqlite-devel ca-certificates findutils tar gzip
+          dnf install -y bash gcc gcc-c++ git sqlite-devel ca-certificates findutils tar gzip
 
       - name: Checkout
         uses: actions/checkout@v6
