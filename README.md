@@ -3,6 +3,8 @@
 Web admin dashboard for a **self-hosted** RustDesk signal/relay stack (`hbbs` / `hbbr`).  
 This repo is separate from [rustdesk](https://github.com/rustdesk/rustdesk) and [rustdesk-server](https://github.com/rustdesk/rustdesk-server).
 
+**Change history:** [CHANGELOG.md](CHANGELOG.md).
+
 ## Features
 
 - Password login (`ADMIN_PASSWORD`), session cookie signed with `ADMIN_SESSION_SECRET` (or a derived key if unset — see below).
