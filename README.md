@@ -62,6 +62,28 @@ export RUSTDESK_CONNECT_RENDEZVOUS=your.hbbs.host
 
 Terminate TLS and route a vhost path or subdomain to `http://127.0.0.1:3031` with nginx or Apache. The app does not set the `Secure` cookie flag so HTTP on localhost works in development; over HTTPS the session cookie still works — for stricter cookie policy you can extend the code to set `Secure` when behind HTTPS.
 
+## Startup script (Linux)
+
+The repo includes:
+
+| File | Purpose |
+|------|---------|
+| [`scripts/rustdesk-server-admin.sh`](scripts/rustdesk-server-admin.sh) | Sources an env file, checks `ADMIN_PASSWORD`, finds the binary, `exec`s it. |
+| [`scripts/rustdesk-server-admin.env.example`](scripts/rustdesk-server-admin.env.example) | Copy to `/etc/rustdesk-server-admin.env` or `scripts/rustdesk-server-admin.env` (`chmod 600`). Use `KEY=value` lines (no `export` needed). |
+| [`scripts/rustdesk-server-admin.service`](scripts/rustdesk-server-admin.service) | Example **systemd** unit using `EnvironmentFile=` and the binary on `/opt/rustdesk/`. |
+
+Quick manual start:
+
+```bash
+chmod +x scripts/rustdesk-server-admin.sh
+cp scripts/rustdesk-server-admin.env.example /etc/rustdesk-server-admin.env
+# edit /etc/rustdesk-server-admin.env — set ADMIN_PASSWORD, HBBS_DB_PATH, etc.
+sudo install -m 755 rustdesk-server-admin /opt/rustdesk/   # your built binary
+sudo RUSTDESK_SERVER_ADMIN_BIN=/opt/rustdesk/rustdesk-server-admin scripts/rustdesk-server-admin.sh
+```
+
+The shell script looks for an env file in order: `RUSTDESK_SERVER_ADMIN_ENV` (if set), then `/etc/rustdesk-server-admin.env`, then `scripts/rustdesk-server-admin.env`. It looks for the binary in `RUSTDESK_SERVER_ADMIN_BIN`, then next to the script, `target/release/`, `/opt/rustdesk/`, `/usr/local/bin/`.
+
 ## Security notes
 
 - **SQLite locking:** hbbs keeps the database open. Reads usually work; **writes** (delete / rename) can return `SQLITE_BUSY`. Use **WAL** mode on the DB if needed, retry, or briefly stop hbbs for maintenance operations.

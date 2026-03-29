@@ -1,0 +1,25 @@
+# Example systemd unit — copy to /etc/systemd/system/rustdesk-server-admin.service
+# and adjust paths. Env file must match scripts/rustdesk-server-admin.env.example (KEY=value).
+#
+#   sudo install -m 600 rustdesk-server-admin.env /etc/rustdesk-server-admin.env
+#   sudo install -m 755 rustdesk-server-admin /opt/rustdesk/rustdesk-server-admin
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now rustdesk-server-admin
+
+[Unit]
+Description=RustDesk hbbs web admin (rustdesk-server-admin)
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/rustdesk-server-admin.env
+WorkingDirectory=/opt/rustdesk
+ExecStart=/opt/rustdesk/rustdesk-server-admin
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
